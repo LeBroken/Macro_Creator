@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Macro</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #1e3c48, #2b5d6c);
+      color: #8A8A8A;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px;
+      background-color: #1e3c48;
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #8A8A8A;
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      gap: 20px;
+    }
+
+    .macro-inputs {
+      flex: 2;
+      background-color: rgba(15, 32, 40, 0.85);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .scan-codes {
+      flex: 1;
+      background-color: rgba(15, 32, 40, 0.85);
+      border-radius: 10px;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      background-color: #1c2e36;
+      color: #8A8A8A;
+      border: 1px solid #395c6b;
+      border-radius: 5px;
+      padding: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    select option[value=""] {
+      color: #888;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      resize: none;
+      margin-top: 10px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #5c91c3;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #4879a6;
+    }
+
+    label {
+      margin-top: 10px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    .toggle {
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle input[type="checkbox"] {
+      appearance: none;
+      width: 50px;
+      height: 25px;
+      background: #395c6b;
+      border-radius: 15px;
+      position: relative;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .toggle input[type="checkbox"]::before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 19px;
+      height: 19px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle input[type="checkbox"]:checked::before {
+      transform: translateX(25px);
+    }
+  </style>
+</head>
+<body>
+  <header>Generate Macro Script</header>
+  <main>
+    <div class="container">
+      <div class="macro-inputs">
+        <div class="grid" id="letterGrid"></div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <div style="flex: 1; min-width: 200px;">
+            <label for="buttonKey">Button Key (e.g. F):</label>
+            <input type="text" id="buttonKey" maxlength="10">
+          </div>
+
+          <div style="flex: 1; min-width: 200px;">
+            <label for="msDelay">Milliseconds Delay (MS):</label>
+            <input type="number" id="msDelay" value="40">
+          </div>
+
+          <div style="flex: 1; min-width: 200px;">
+            <label for="commentStart">Start Comment:</label>
+            <input type="text" id="commentStart" maxlength="100">
+          </div>
+
+          <div style="flex: 1; min-width: 200px;">
+            <label for="commentEnd">End Comment:</label>
+            <input type="text" id="commentEnd" maxlength="100">
+          </div>
+        </div>
+
+        <div class="toggle">
+          <label for="macroToggle">Simultaneous press</label>
+          <input type="checkbox" id="macroToggle">
+        </div>
+
+        <button onclick="generateMacro()">Generate Macro</button>
+        <button onclick="copyToClipboard()">Copy to Clipboard</button>
+        <button onclick="downloadScript()">Download as .ahk</button>
+
+        <label for="output">Generated Macro:</label>
+        <textarea id="output" readonly></textarea>
+      </div>
+
+      <div class="scan-codes">
+        <h2>Scan Codes</h2>
+        <ul id="scList"></ul>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const scCodes = {
+      A: 'sc1E', B: 'sc30', C: 'sc2E', D: 'sc20', E: 'sc12', F: 'sc21', G: 'sc22', H: 'sc23',
+      I: 'sc17', J: 'sc24', K: 'sc25', L: 'sc26', M: 'sc32', N: 'sc31', O: 'sc18', P: 'sc19',
+      Q: 'sc10', R: 'sc13', S: 'sc1F', T: 'sc14', U: 'sc16', V: 'sc2F', W: 'sc11', X: 'sc2D',
+      Y: 'sc15', Z: 'sc2C', F1: 'sc3B', F2: 'sc3C', F3: 'sc3D', F4: 'sc3E', F5: 'sc3F',
+      F6: 'sc40', F7: 'sc41', F8: 'sc42', F9: 'sc43', F10: 'sc44', F11: 'sc57', F12: 'sc58',
+      ESC: 'sc1', TAB: 'scF', ENTER: 'sc1C', 'CAPS LOCK': 'sc3A', 'L CTR': 'sc1D',
+      'R CTR': 'sc11D', 'L SHIFT': 'sc2A', 'ARROW UP': 'sc148', 'ARROW DOWN': 'sc150',
+      'ARROW LEFT': 'sc14B', 'ARROW RIGHT': 'sc14D', SPACE: 'sc39'
+    };
+
+    const gridContainer = document.getElementById('letterGrid');
+    const scList = document.getElementById('scList');
+    for (let i = 0; i < 25; i++) {
+      const select = document.createElement('select');
+      select.classList.add('letter-box');
+      select.innerHTML = '<option value="">Select Key</option>' +
+        Object.entries(scCodes).map(([key, code]) => `<option value="${key}">${key} (${code})</option>`).join('');
+      gridContainer.appendChild(select);
+    }
+
+    for (const [key, code] of Object.entries(scCodes)) {
+      const li = document.createElement('li');
+      li.textContent = `${key} - ${code}`;
+      scList.appendChild(li);
+    }
+
+    function generateMacro() {
+      const inputs = document.querySelectorAll('.letter-box');
+      const buttonKey = document.getElementById('buttonKey').value.trim();
+      const ms = document.getElementById('msDelay').value.trim() || '40';
+      const toggle = document.getElementById('macroToggle').checked;
+      const commentStart = document.getElementById('commentStart').value.trim();
+      const commentEnd = document.getElementById('commentEnd').value.trim();
+
+      let macro = '';
+      if (commentStart) macro += `;${commentStart}\n\n`;
+      macro += `${buttonKey.toLowerCase()}::\n{\n`;
+
+      if (toggle) {
+        let downLine = 'Send, ';
+        let upLine = 'Send, ';
+        inputs.forEach(input => {
+          const val = input.value.trim().toUpperCase();
+          if (val && scCodes[val]) {
+            const sc = scCodes[val];
+            downLine += `{${sc} down}`;
+            upLine += `{${sc} up}`;
+          }
+        });
+        macro += `${downLine}\nSleep, ${ms}\n${upLine}\nSleep, ${ms}\n`;
+      } else {
+        inputs.forEach(input => {
+          const val = input.value.trim().toUpperCase();
+          if (val && scCodes[val]) {
+            const sc = scCodes[val];
+            macro += `SendInput, {${sc} down}\nSleep, ${ms}\nSendInput, {${sc} up}\nSleep, ${ms}\n\n`;
+          }
+        });
+      }
+
+      macro += `}\nreturn`;
+      if (commentEnd) macro += `\n\n;${commentEnd}`;
+      document.getElementById('output').value = macro;
+    }
+
+    function copyToClipboard() {
+      const output = document.getElementById('output');
+      output.select();
+      output.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("Macro copied to clipboard!");
+    }
+
+    function downloadScript() {
+      const blob = new Blob([document.getElementById('output').value], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = "My new macro.ahk";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+  </script>
+</body>
+</html>
